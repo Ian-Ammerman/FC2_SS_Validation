@@ -1,14 +1,14 @@
 % Manual State-Space Simulation w/ Kalman Filter
 close all; clear all; clc;
-home = 'C:\Umaine Google Sync\Masters Working Folder\FOCAL_C2';
+home = 'C:\Umaine Google Sync\GitHub\FC2_SS_Validation';
 
 %% System Definition ------------------------------------------------------ %%
 % Load in HydroDyn SS Model Matrices. These will be simulated directly - no
 % Kalman filter is applied here at this time. Future work could use
 % sensor measurements to correct force
-load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_A',home),'A');
-load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_B',home),'B');
-load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_C',home),'C');
+load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_A.mat',home),'A');
+load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_B.mat',home),'B');
+load(sprintf('%s\\Models\\DT1_Locked_HD\\DT1_Locked_HD_C.mat',home),'C');
 
 A_HD = A;
 B_HD = B(:,[37,7,8,9,10,11,12]);
@@ -63,7 +63,7 @@ clear C SS_data;
 %% ----------------------------------------------------------------------- %%
 % Measurement [z] & measurement noise [R] (from real plant, simulated with
 % experiment data) as well as simulation time vector, dt, and wave elevation input.
-load(sprintf('%s\\Simulations\\C2_PinkNoise\\Test_Results.mat',home),'test_results');
+load(sprintf('%s\\Simulations\\Test_03\\Test_Results.mat',home),'test_results');
 MeasurementFields = {'PtfmPitch','PtfmRoll','FAIRTEN1','FAIRTEN2','FAIRTEN3'};
 
 time = test_results.Time;
@@ -149,8 +149,6 @@ load('FullKalman_P.mat','P');
 
 % Define the measurement coveriance matrix.
 load('FullKalman_Q.mat','Q');
-% Q = diag([0.1,0.1,0.1,0.0035,0.0035,0.0035,0.25,0.25,0.25,0.25,0.1,0.1,0.1,0.0035,0.0035,0.0035,0.25,0.25,0.25,0.25]);
-% load('NewKalmanQ.mat','Q');
 
 %% RUN SIMULATION ---------------------------------------------------- %%
 % Initialization (zero IC)
@@ -206,23 +204,49 @@ for i = 1:length(outputNames)
 end
 
 %% Plot Results
+tstart = 4600;
+tstop = 4700;
+
 figure
 gca; hold on; box on;
+ylabel('Fore-Aft Tower Bending [kN-m]')
+xlabel('Time [s]')
+plot(time,rMean(test_results.TwrBsMyt*10^-3),'DisplayName','Experiment');
+plot(time-29.975,rMean(kalman_results.TwrBsMyt),'DisplayName','Kalman');
+xlim([tstart,tstop])
+legend
+
+figure
+gca; hold on; box on;
+ylabel('Pitch [deg]')
+xlabel('Time [s]')
 plot(time,rMean(test_results.PtfmPitch),'DisplayName','Experiment');
 plot(time-29.975,rMean(kalman_results.PtfmPitch),'DisplayName','Kalman');
-xlim([12000,13500]);
+xlim([tstart,tstop]);
+ylim([-0.6,0.6])
 legend
 
 figure
 gca; hold on; box on;
-plot(time,rMean(test_results.PtfmSurge),'DisplayName','Experiment');
-plot(time-29.975,rMean(kalman_results.PtfmSurge),'DisplayName','Kalman');
-xlim([12000,13500]);
+ylabel('Heave [m]')
+xlabel('Time [s]')
+plot(time,rMean(test_results.PtfmHeave),'DisplayName','Experiment');
+plot(time-29.975,rMean(kalman_results.PtfmHeave),'DisplayName','Kalman');
+xlim([tstart,tstop])
 legend
 
-%% Save Results in Simulation Folder
-cd('C:\Umaine Google Sync\Masters Working Folder\FOCAL_C2\Simulations\C2_PinkNoise')
-save('Kalman_Results.mat','kalman_results')
+figure
+gca; hold on; box on;
+ylabel('Surge [m]')
+xlabel('Time [s]')
+plot(time,rMean(test_results.PtfmSurge),'DisplayName','Experiment');
+plot(time-29.975,rMean(kalman_results.PtfmSurge),'DisplayName','Kalman');
+xlim([tstart,tstop]);
+legend
+
+% %% Save Results in Simulation Folder
+% cd('C:\Umaine Google Sync\Masters Working Folder\FOCAL_C2\Simulations\C2_PinkNoise')
+% save('Kalman_Results.mat','kalman_results')
 
 %% Functions --------------------------------------------------------- %%
 % Prediction (Labbe, 2020, pg 212)
